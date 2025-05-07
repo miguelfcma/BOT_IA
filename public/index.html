@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Interfaz de Chat Bot</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+      }
+      #chat-window {
+        border: 1px solid #ccc;
+        padding: 10px;
+        height: 300px;
+        overflow-y: auto;
+        margin-bottom: 20px;
+      }
+      .message {
+        padding: 5px;
+        margin: 5px 0;
+      }
+      .user {
+        color: blue;
+      }
+      .bot {
+        color: green;
+      }
+      .typing {
+        color: gray;
+        font-style: italic;
+      }
+      @keyframes dots {
+        0% {
+          content: "Escribiendo";
+        }
+        33% {
+          content: "Escribiendo.";
+        }
+        66% {
+          content: "Escribiendo..";
+        }
+        100% {
+          content: "Escribiendo...";
+        }
+      }
+      .typing::after {
+        content: "Escribiendo";
+        animation: dots 1.5s infinite;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Interfaz de Chat Bot</h1>
+
+    <div
+      id="chat-window"
+      style="
+        border: 1px solid #ccc;
+        padding: 10px;
+        height: 300px;
+        overflow-y: auto;
+      "
+    ></div>
+
+    <form id="chat-form">
+      <label>
+        agentmessagestemplatesId:
+        <input
+          type="text"
+          id="agentmessagestemplatesId"
+          placeholder="Plantilla de mensajes del agente"
+        />
+      </label>
+      <br />
+      <label>
+        ClientID:
+        <input type="text" id="clientId" placeholder="clientId" />
+      </label>
+      <br />
+      <label>
+        UserID:
+        <input type="text" id="userId" placeholder="userId" />
+      </label>
+      <br />
+      <label>
+        module (Opcional):
+        <input type="text" id="module" placeholder="module" />
+      </label>
+      <br />
+      <label>
+        routeId (opcional, no hace nada por ahora):
+        <input type="text" id="routeId" placeholder="routeId" />
+      </label>
+      <br />
+      <label>
+        mensaje:
+        <input
+          type="text"
+          id="message"
+          placeholder="Ingresa tu mensaje"
+          required
+        />
+      </label>
+      <br />
+      <button type="submit">Enviar</button>
+    </form>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        $("#chat-form").submit(async function (e) {
+          e.preventDefault();
+
+          let agentmessagestemplatesId = $("#agentmessagestemplatesId")
+            .val()
+            .trim();
+          let userId = $("#userId").val().trim();
+          let clientId = $("#clientId").val().trim();
+          let module = $("#module").val().trim();
+          let routeId = $("#routeId").val().trim();
+          let message = $("#message").val().trim();
+
+          $("#chat-window").append(
+            `<div class="message user"><strong>Usuario:</strong> ${message}</div>`
+          );
+
+          let typingIndicator = $(
+            '<div class="message typing"><em>Escribiendo...</em></div>'
+          );
+          $("#chat-window").append(typingIndicator);
+          $("#chat-window").scrollTop($("#chat-window")[0].scrollHeight);
+
+          let payload = {
+            agentmessagestemplatesId,
+            userId,
+            clientId,
+            module,
+            routeId,
+            message,
+          };
+
+          try {
+            let response = await $.ajax({
+              url: "https://4t5tjd7b-3000.usw3.devtunnels.ms/api/chat",
+              method: "POST",
+              contentType: "application/json",
+              data: JSON.stringify(payload),
+            });
+
+            let botReply =
+              response.reply || "No se recibió respuesta del servidor.";
+
+            typingIndicator.remove();
+
+            $("#chat-window").append(
+              `<div class="message bot"><strong>Bot:</strong> ${botReply}</div>`
+            );
+
+            $("#message").val("");
+            $("#chat-window").scrollTop($("#chat-window")[0].scrollHeight);
+          } catch (error) {
+            console.error("Error al enviar el mensaje:", error);
+            typingIndicator.remove();
+          }
+        });
+      });
+    </script>
+  </body>
+</html>

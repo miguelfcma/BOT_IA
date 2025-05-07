@@ -1,0 +1,4 @@
+En esta carpeta estaba planeando usar modelos de las tablas para hacer mas facil las consulta a la bd
+usando un ORM o objet relational Model
+pero al final no lo use , pero por el momento lo dejo por si mas
+adelante se requiere usar
