@@ -57,7 +57,7 @@ async function saveMessage(sessionId, role, message, data = null) {
 async function getChatHistory(sessionId) {
   return new Promise((resolve, reject) => {
     db.all(
-      "SELECT role, message, data FROM messages WHERE session_id = ? ORDER BY timestamp ASC",
+      "SELECT id, role, message, data FROM messages WHERE session_id = ? ORDER BY timestamp ASC",
       [sessionId],
       (err, rows) => {
         if (err) return reject(err);
@@ -74,12 +74,36 @@ async function getChatHistory(sessionId) {
         const history = filteredMessages.map((row, index) => {
           let text = row.message;
 
-          // Información extra en el último mensaje
-          if (index === filteredMessages.length - 1 && row.data) {
+          ///Si es el penúltimo mensaje, agregar información adicional
+          // console.log("index", index);
+          // console.log("filteredMessages", filteredMessages.length - 2);
+          // console.log("row", row.role);
+          // if ((index === filteredMessages.length - 2) && row.data) {
+          if (index === filteredMessages.length - 3) {
+            console.log("hay data extra", row.data ? "si" : "no");
+            console.log("index", index);
+
+            console.log("row", row.role);
+            console.log("row id", row.id);
+
             try {
               const extra = JSON.parse(row.data);
-              text += "\nInformación adicional: " + JSON.stringify(extra);
-            } catch (e) {}
+              // text += "\nInformación adicional: " + JSON.stringi<fy(extra);
+
+              // text += "\nA continuación, te proporciono mis propios datos personales: " + JSON.stringify(extra);
+
+              text +=
+                `
+                Mi información como cliente es la siguiente: 
+                Cuando quieras referirte a la fuente de datos, **solo** usarás una de estas fórmulas:
+                - “Con la información a la que tengo acceso,”
+                - “Según los datos y el contexto disponibles,”
+                - “Basándome en la información disponible para mí,” 
+                **Nunca** usarás “que me has proporcionado”, “que me diste” u otras variantes que sugieran directamente que el usuario te proporcionó esos datos.
+                ` + JSON.stringify(extra);
+            } catch (e) {
+              console.error("Error al parsear JSON:", e);
+            }
           }
 
           return { text };

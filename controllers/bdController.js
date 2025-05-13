@@ -1,6 +1,4 @@
-
-//? Este archivo estan las funciones que interactúan con la base de datos DEV_DSD para realizar consultas y obtener la informacion necesaria para el chatbot. 
-
+//? Este archivo estan las funciones que interactúan con la base de datos DEV_DSD para realizar consultas y obtener la informacion necesaria para el chatbot.
 
 const Order = require("../models/Order.js");
 const { sequelizeDB } = require("../database/db.js");
@@ -78,12 +76,76 @@ const getClientInfoByClientId = async (id) => {
     return [];
   }
 };
+// Esta función obtiene los productos más vendidos por cliente
+const getProductsMostSold = async (id) => {
+  try {
+    const result = await sequelizeDB.query(
+      `
+      select p.Name as producto, sum(od.QtyOrdered) as Cant
+      from orders o inner join ordersdetails od on o.Id=od.OrderId
+      inner join products p on od.ProductId=p.Id
+      where o.CustomerId=? and o.OrderDate BETWEEN NOW() - INTERVAL 30 DAY AND NOW()
+      Group By producto
+      Order By Cant desc
+      limit 10;
+        `,
+      {
+        replacements: [id],
+        type: sequelizeDB.QueryTypes.SELECT,
+      }
+    );
+
+    return result;
+  } catch (error) {
+    console.error(
+      "Error al obtener la información de los productos que más se han vendido",
+      error
+    );
+    return [];
+  }
+};
+
+// Esta función obtiene los Productos que no se han vendido en este cliente
+const getProductsNotSold = async (id) => {
+  try {
+    const result = await sequelizeDB.query(
+      `
+      select p.Name
+      from customers cus 
+      inner join pricelistsdetails pld on cus.PriceListId=pld.PriceListId
+      inner join products p on pld.ProductId=p.Id
+      where cus.Id=? and 
+      pld.ProductId not in (
+        select distinct od.ProductId
+        from orders o inner join ordersdetails od on o.Id=od.OrderId
+        where o.CustomerId=? 
+        and o.OrderDate BETWEEN NOW() - INTERVAL 30 DAY AND NOW()
+      )
+      limit 10;
+        `,
+      {
+        replacements: [id, id],
+        type: sequelizeDB.QueryTypes.SELECT,
+      }
+    );
+
+    return result;
+  } catch (error) {
+    console.error(
+      "Error al obtener la información de los productos que no se han vendido",
+      error
+    );
+    return [];
+  }
+};
 
 async function getEssentialData(clientId, options = {}) {
   const defaultOptions = {
-    cliente: true,
+    clienteInfo: true,
     orders: false,
-  
+    productsMostSold: true,
+    productsNotSold: true,
+
   };
 
   const finalOptions = { ...defaultOptions, ...options };
@@ -92,11 +154,14 @@ async function getEssentialData(clientId, options = {}) {
 
   const data = {};
 
-  if (finalOptions.cliente) {
+  if (finalOptions.clienteInfo) {
     promises.push(
       getClientInfoByClientId(clientId)
         .then((clientInfo) => {
-          data.cliente = clientInfo;
+          data.cliente = {
+            mensaje: "Mi información general es:",
+            datos: clientInfo,
+          };
         })
         .catch((err) => console.error("Error en cliente:", err))
     );
@@ -106,15 +171,42 @@ async function getEssentialData(clientId, options = {}) {
     promises.push(
       getOrders()
         .then((orders) => {
-          data.ordenes = orders;
+          data.ordenes = {
+            mensaje: "Listado de órdenes realizadas por el cliente",
+            datos: orders,
+          };
         })
         .catch((err) => console.error("Error en orders:", err))
     );
   }
 
+  if (finalOptions.productsMostSold) {
+    promises.push(
+      getProductsMostSold(clientId)
+        .then((products) => {
+          data.productosMasVendidos = {
+            mensaje: "mis productos más vendidos en los últimos 30 días son:",
+            datos: products,
+          };
+        })
+        .catch((err) => console.error("Error en productosMasVendidos:", err))
+    );
+  }
+
+  if (finalOptions.productsNotSold) {
+    promises.push(
+      getProductsNotSold(clientId)
+        .then((products) => {
+          data.productosNoVendidos = {
+            mensaje: "mis productos que no se han vendido en los últimos 30 días son:",
+            datos: products,
+          };
+        })
+        .catch((err) => console.error("Error en productosNoVendidos:", err))
+    );
+  }
 
   try {
-
     await Promise.all(promises);
   } catch (error) {
     console.error("Error al obtener datos esenciales:", error);
@@ -123,5 +215,9 @@ async function getEssentialData(clientId, options = {}) {
   return data;
 }
 
-
-module.exports = { getOrders, getClientInfoByClientId, getOrders2, getEssentialData };
+module.exports = {
+  getOrders,
+  getClientInfoByClientId,
+  getOrders2,
+  getEssentialData,
+};

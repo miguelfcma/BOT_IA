@@ -33,6 +33,7 @@ exports.chatHandler = async (req, res) => {
     module, //Opcional para recuperar info del modulo en el que esta
     action, //opcional para tomar el prompt de la accion que el eligio
   } = req.body;
+  console.log("Mensaje recibido:", message);
   if (
     agentmessagestemplatesId === undefined ||
     userId === undefined ||
